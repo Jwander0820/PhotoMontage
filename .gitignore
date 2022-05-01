@@ -1,0 +1,27 @@
+# exe file
+*.exe
+
+# picture
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.tif
+
+# 忽略資料夾
+.idea/*
+
+# 忽略這類型的所有資料夾
+**/__pycache__
+**/logs
+
+# 忽略log檔格式
+*.yaml
+*.log
+*.conf
+
+# 忽略訓練的模型
+*.h5
+
+# 忽略資料集
+*.zip
