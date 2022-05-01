@@ -27,3 +27,38 @@ class CalImgData:
         color = img_temp[0][0][:]
         return img_temp, color
 
+    @staticmethod
+    def cal_img_square_crop(img):
+        """
+        將圖像做方形置中框選，判斷圖像的高寬，判斷短邊為高或寬，並以短邊的值為最大方型框選，框選中心的圖像
+        :param img:要框選的圖像
+        :return:回傳框選資料，x,y,w,h，左上座標(x,y)，延伸寬高(w,h)
+        """
+        try:
+            height, width, channel = img.shape
+        except:
+            height, width = img.shape
+        if height == width:
+            x = 0
+            y = 0
+            w = width
+            h = height
+        elif height < width:
+            # new_img = (height, height)
+            left_up_point = (width - height) // 2
+            x = left_up_point
+            y = 0
+            w = height
+            h = height
+        else:
+            # new_img = (width, width)
+            left_up_point = (height - width) // 2
+            x = 0
+            y = left_up_point
+            w = width
+            h = width
+        return x, y, w, h
+
+
+if __name__ == '__main__':
+    None

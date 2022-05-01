@@ -2,25 +2,48 @@ import cv2
 import glob
 from random import shuffle
 from utils.img_tools import ImgTools
-
+from utils.cal_img_data import CalImgData
 
 class GetDirImg:
     @staticmethod
-    def get_dir_all_img(resize_wh, p2p):
+    def get_dir_some_img_resize_rectangle(resize_wh, number_of_pictures):
         """
-        取得元素圖像資料夾下所有圖像資料
-        :param resize_wh:
-        :param p2p:
-        :return:
+        取得元素圖像資料夾下所有圖像資料，並resize成指定大小
+        :param resize_wh:resize的高度和寬度(h,w)
+        :param number_of_pictures:要取幾張圖片
+        :return:回傳選取完resize完的圖像資料清單
         """
         img_height, img_width = resize_wh
         path = "./element_img/*"
         dirs = glob.glob(path)  # 提取資料夾圖片資料
         shuffle(dirs)
         img_list = []
-        for i in range(p2p**2):
-            # img = cv2.imread(dirs[i], cv2.IMREAD_COLOR)
+        for i in range(number_of_pictures):
             img = ImgTools.pil_import_img_trans_cv2(dirs[i])
             img = cv2.resize(img, (img_width, img_height))
             img_list.append(img)
         return img_list
+
+    @staticmethod
+    def get_dir_img_resize_square_data(number_of_pictures):
+        """
+        取得元素圖像資料夾下所有圖像資料，並紀錄正方形裁切訊息成txt
+        :param number_of_pictures:要取幾張圖片
+        :return:回傳選取完resize完的圖像資料清單
+        """
+        path = "./element_img/*"
+        txt_path = './element_img_square_data.txt'
+        dirs = glob.glob(path)  # 提取資料夾圖片資料
+        with open(txt_path, 'a') as f:
+            for i in range(number_of_pictures):
+                file = dirs[i]
+                if '.tif' in file or '.png' in file or '.jpg' in file:
+                    img = ImgTools.pil_import_img_trans_cv2(file)
+                    x, y, w, h = CalImgData.cal_img_square_crop(img)
+                    img_crop = img[y:y+h, x:x+w]
+                    _, color = CalImgData.cal_img_average_color(img_crop)
+                    f.write(f'{file};{(x, y, w, h)};{color}\n')
+        return None
+
+if __name__ == '__main__':
+    GetDirImg.get_dir_img_resize_square_data(5199)
