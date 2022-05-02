@@ -59,6 +59,21 @@ class CalImgData:
             h = width
         return x, y, w, h
 
+    @staticmethod
+    def cal_color_euclidean_distance(color1, color2):
+        """
+        計算兩個顏色的歐式距離，距離越近代表顏色越相似
+        :param color1:要計算的顏色A
+        :param color2:要計算的顏色B
+        :return:回傳歐式距離之值
+        """
+        b1, g1, r1 = color1
+        b2, g2, r2 = color2
+        euclidean_distance = (b1 - b2) ** 2 + (g1 - g2) ** 2 + (r1 - r2) ** 2
+        return euclidean_distance
+
 
 if __name__ == '__main__':
-    None
+    colorA = (255, 255, 0)
+    colorB = (155, 255, 0)
+    print(CalImgData.cal_color_euclidean_distance(colorA, colorB))
