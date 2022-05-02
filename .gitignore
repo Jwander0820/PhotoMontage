@@ -25,3 +25,17 @@
 
 # 忽略資料集
 *.zip
+
+# 排除測試檔案
+!/target_img/3x3_color_map.png
+!/element_img/blue_test_img1.jpg
+!/element_img/blue_test_img2.jpg
+!/element_img/blue_test_img3.jpg
+!/element_img/brown_test_img.jpg
+!/element_img/green_test_img.jpg
+!/element_img/orange_test_img.png
+!/element_img/pink_test_img.jpg
+!/element_img/purple_test_img.jpg
+!/element_img/red_test_img.jpg
+
+

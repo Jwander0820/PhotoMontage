@@ -7,11 +7,11 @@ from utils.cal_img_data import CalImgData
 from utils.split_txt_data import SpiltTxtData
 
 
-def main(target_img_path, save_img_name):
+def main(target_img_path, save_img_name, org_img_pixel, element_img_pixel):
     org_img = ImgTools.pil_import_img_trans_cv2(target_img_path)  # 讀取底圖的原圖
 
-    org_img_pixel = 100  # 底圖採樣單位(n*n pixel取平均作為單位元素)
-    element_img_pixel = 100  # 單位元素圖片的大小(m*m pixel填充到新的圖片中)
+    # org_img_pixel = 100  # 底圖採樣單位(n*n pixel取平均作為單位元素)
+    # element_img_pixel = 100  # 單位元素圖片的大小(m*m pixel填充到新的圖片中)
     # 建議值200*200通常已經能看出是一張圖片了，填充圖像的尺寸越大(=越精細)，最終成品圖就越大，儲存時需要注意
     # ex.100*100的底圖，以20*20做分割就會分割成5*5的大方格，若設定填充圖片大小為200*200
     # 接下來會將元素圖片以200*200的大小貼在5*5對應的格子中，最終生成一張1000*1000大小的蒙太奇圖片
@@ -89,11 +89,12 @@ def main(target_img_path, save_img_name):
 
 
 if __name__ == '__main__':
-    import time
-    start = time.time()
+    # 取得元素圖像的資料，路徑,方形裁切資料,平均顏色，並記錄成txt，須執行過一次產生資料清單
+    # GetDirImg.get_dir_img_resize_square_data()
     target_img_path = "./target_img/3x3_color_map.png"  # 作為底圖的路徑
     save_img_name = "測試"  # 儲存檔案名稱
-    main(target_img_path, save_img_name)
-    end = time.time()
-    print(end - start)
-    # GetDirImg.get_dir_img_resize_square_data(5199)  # 取得元素圖像的資料，路徑,方形裁切資料,平均顏色，並記錄成txt
+    org_img_pixel = 100  # 底圖採樣單位(n*n pixel取平均作為單位元素)
+    element_img_pixel = 300  # 單位元素圖片的大小(m*m pixel填充到新的圖片中)
+    main(target_img_path, save_img_name, org_img_pixel, element_img_pixel)
+
+
