@@ -7,7 +7,7 @@ from utils.cal_img_data import CalImgData
 from utils.split_txt_data import SpiltTxtData
 
 
-def main(target_img_path, save_img_name, org_img_pixel, element_img_pixel):
+def main(target_img_path, save_img_name, org_img_pixel, element_img_pixel, element_img_data_path):
     org_img = ImgTools.pil_import_img_trans_cv2(target_img_path)  # 讀取底圖的原圖
 
     # org_img_pixel = 100  # 底圖採樣單位(n*n pixel取平均作為單位元素)
@@ -28,9 +28,8 @@ def main(target_img_path, save_img_name, org_img_pixel, element_img_pixel):
     print(org_img.shape)  # (高,寬,通道數)
 
     # 讀取先前計算好的元素圖片資料，讀取到清單中，方便快速計算，不用重複多次讀寫真實圖片資料
-    path = './element_img_square_data.txt'
     text = []
-    with open(path, 'r') as f:
+    with open(element_img_data_path, 'r') as f:
         for line in f:
             text.append(line)
 
@@ -52,8 +51,8 @@ def main(target_img_path, save_img_name, org_img_pixel, element_img_pixel):
             similar_color = [10000, 0]  # [距離,編號]紀錄最相近的顏色
             similar_color_list = []
             for k in range(len(text)):
-                _, _, color_data = SpiltTxtData.split_img_resize_data(text[k])
-                euclidean_distance = CalImgData.cal_color_euclidean_distance(color, color_data)
+                _, _, average_color, most_color = SpiltTxtData.split_img_resize_data(text[k])
+                euclidean_distance = CalImgData.cal_color_euclidean_distance(color, average_color)
                 if euclidean_distance < similar_color[0]:
                     similar_color[0] = euclidean_distance
                     similar_color[1] = k
@@ -63,10 +62,10 @@ def main(target_img_path, save_img_name, org_img_pixel, element_img_pixel):
             print(similar_color_list)
             try:
                 # 清單打亂後取第一個 = 取清單內隨機圖片
-                file_path, crop_data, color_data = SpiltTxtData.split_img_resize_data(text[similar_color_list[0]])
+                file_path, crop_data, average_color, most_color = SpiltTxtData.split_img_resize_data(text[similar_color_list[0]])
             except:
                 # 若清單內沒資料(表示沒有小於定值的資料)，則取顏色距離最短的圖片
-                file_path, crop_data, color_data = SpiltTxtData.split_img_resize_data(text[similar_color[1]])
+                file_path, crop_data, average_color, most_color = SpiltTxtData.split_img_resize_data(text[similar_color[1]])
 
             crop_x, crop_y, crop_w, crop_h = crop_data  # 裁切資料
             img_temp = ImgTools.pil_import_img_trans_cv2(file_path)  # 讀取元素圖片
@@ -90,11 +89,22 @@ def main(target_img_path, save_img_name, org_img_pixel, element_img_pixel):
 
 if __name__ == '__main__':
     # 取得元素圖像的資料，路徑,方形裁切資料,平均顏色，並記錄成txt，須執行過一次產生資料清單
-    # GetDirImg.get_dir_img_resize_square_data()
+    # dir_path = "./element_img"
+    # specified_dir_data = "./element_img_data/element_img_square_data.txt"
+    # GetDirImg.get_specified_dir_img_data(dir_path, specified_dir_data)
+    # 測試用
     target_img_path = "./target_img/3x3_color_map.png"  # 作為底圖的路徑
     save_img_name = "測試"  # 儲存檔案名稱
     org_img_pixel = 100  # 底圖採樣單位(n*n pixel取平均作為單位元素)
-    element_img_pixel = 300  # 單位元素圖片的大小(m*m pixel填充到新的圖片中)
-    main(target_img_path, save_img_name, org_img_pixel, element_img_pixel)
+    element_img_pixel = 200  # 單位元素圖片的大小(m*m pixel填充到新的圖片中)
+    element_img_data_path = './element_img_data/element_img_square_data.txt'
+    main(target_img_path, save_img_name, org_img_pixel, element_img_pixel, element_img_data_path)
+
+    # target_img_path = "./target_img/Nyan_Cat.jpg"  # 作為底圖的路徑
+    # save_img_name = "Nyan_Cat"  # 儲存檔案名稱
+    # org_img_pixel = 20  # 底圖採樣單位(n*n pixel取平均作為單位元素)
+    # element_img_pixel = 200  # 單位元素圖片的大小(m*m pixel填充到新的圖片中)
+    # element_img_data_path = './element_img_data/meme_img_data.txt'
+    # main(target_img_path, save_img_name, org_img_pixel, element_img_pixel, element_img_data_path)
 
 

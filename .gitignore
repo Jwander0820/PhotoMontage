@@ -19,6 +19,7 @@
 *.yaml
 *.log
 *.conf
+*.txt
 
 # 忽略訓練的模型
 *.h5
@@ -37,5 +38,5 @@
 !/element_img/pink_test_img.jpg
 !/element_img/purple_test_img.jpg
 !/element_img/red_test_img.jpg
-
+!/element_img_data/element_img_square_data.txt
 
