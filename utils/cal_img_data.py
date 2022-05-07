@@ -19,8 +19,8 @@ class CalImgData:
     def cal_img_pixel_frequency_color(img):
         """
         傳入圖像，計算其像素值頻率，回傳同樣大小矩形的純色圖像，和出現頻率最高的顏色(類似眾數概念)，計算時間較長一點
-        :param img: 要計算平均顏色的圖像
-        :return: 同樣大小矩形的純色圖像, 平均顏色
+        :param img: 要計算眾數顏色的圖像
+        :return: 同樣大小矩形的純色圖像, 眾數顏色
         """
         # 取矩陣平均，並回傳相同大小，單一色塊的矩形
         img_temp = img.copy()
@@ -36,9 +36,9 @@ class CalImgData:
         :param img:要框選的圖像
         :return:回傳框選資料，x,y,w,h，左上座標(x,y)，延伸寬高(w,h)
         """
-        try:
+        if len(img.shape) == 3:
             height, width, channel = img.shape
-        except:
+        else:
             height, width = img.shape
         if height == width:
             x = 0
@@ -46,14 +46,14 @@ class CalImgData:
             w = width
             h = height
         elif height < width:
-            # new_img = (height, height)
+            # new_img = (height, height)；橫向的圖片，高度方向為短邊
             left_up_point = (width - height) // 2
             x = left_up_point
             y = 0
             w = height
             h = height
         else:
-            # new_img = (width, width)
+            # new_img = (width, width)；直向的圖片，寬度方向為短邊
             left_up_point = (height - width) // 2
             x = 0
             y = left_up_point

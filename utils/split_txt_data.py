@@ -32,7 +32,7 @@ class SpiltTxtData:
 
 
 if __name__ == '__main__':
-    path = '../element_img_square_data.txt'
+    path = '../element_img_data/element_img_square_data.txt'
     text = []
     with open(path, 'r') as f:
         for line in f:
@@ -41,6 +41,8 @@ if __name__ == '__main__':
     #     path, crop, average_color, most_color = SpiltTxtData.split_img_resize_data(text[i])
 
     path, crop, average_color, most_color = SpiltTxtData.split_img_resize_data(text[0])
+    print(text[0])
+
     print(path)
     print(crop)
     print(average_color)

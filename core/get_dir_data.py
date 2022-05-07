@@ -62,11 +62,11 @@ class GetDirImg:
         :param save_element_img_list_file_name: 儲存元素圖像資料的檔名
         :return:True
         """
-        file_list = []
         folder_dir = "./element_img_data"
-        txt_path = os.path.join(folder_dir, save_element_img_list_file_name)  # 儲存資料清單的位置
         if not os.path.exists(folder_dir):
             os.makedirs(folder_dir)
+        txt_path = os.path.join(folder_dir, save_element_img_list_file_name)  # 儲存資料清單的位置
+        file_list = []
         for root, dirs, files in os.walk(dir_path, topdown=False):
             for name in files:  # 取得路徑下所有檔案
                 file_name = os.path.join(root, name)
@@ -95,5 +95,3 @@ if __name__ == '__main__':
     dir_path = r"..\element_img"  # 讀取的資料夾路徑
     save_element_img_list_file_name = "example.txt"  # 元素圖片清單的檔名
     GetDirImg.get_specified_dir_img_data(dir_path, save_element_img_list_file_name)
-
-
