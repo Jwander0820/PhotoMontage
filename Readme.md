@@ -8,6 +8,8 @@
 </div>
 
 # 程式範例
+環境所需的套件可以參考requirement.txt；主要為numpy、OpenCV、Pillow
+
 測試用資料清單已生成，直接執行main.py即可，檔案會輸出在montage_img資料夾下
 
 **測試用資料版權皆非本人所有，僅提供測試使用，圖片來源皆為twitter公開圖源**
