@@ -23,18 +23,23 @@ class ImgTools:
         cv2.destroyAllWindows()
 
     @staticmethod
-    def save_img(file_name, img):
+    def save_img(file_name, img, org_img_pixel, element_img_pixel, cal_color_method):
         """
         儲存圖像
         :param file_name:儲存的檔名
         :param img:要儲存的圖像資料
-        :return:None
+        :param org_img_pixel: 底圖採樣單位
+        :param element_img_pixel: 單位元素圖片的大小
+        :param cal_color_method: 計算底圖顏色的方法:平均顏色->average ; 眾數顏色->most，預設為average
+        :return: None
         """
+        zoom_ratio = element_img_pixel // org_img_pixel  # 計算縮放倍率
         dir_path = f"./montage_img"
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         # Saving the image 儲存圖片
-        filename = f'{dir_path}/montage_{file_name}.png'
+        filename = f'{dir_path}/Montage_{file_name}_ZoomRatio-{zoom_ratio}_' \
+                   f'ElementImgSize-{element_img_pixel}_Method-{cal_color_method}.png'
         # imencode，好處是能寫入中文名稱
         cv2.imencode('.png', img, [int(cv2.IMWRITE_TIFF_RESUNIT), 2,  # 解析度單位
                                    int(cv2.IMWRITE_TIFF_COMPRESSION), 5,  # 壓縮方式

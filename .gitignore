@@ -7,6 +7,7 @@
 *.png
 *.gif
 *.tif
+*.mp4
 
 # 忽略資料夾
 .idea/*
@@ -29,6 +30,7 @@
 
 # 排除測試檔案
 !/target_img/3x3_color_map.png
+!/target_img/Nyan_Cat.png
 !/element_img/blue_test_img1.jpg
 !/element_img/blue_test_img2.jpg
 !/element_img/blue_test_img3.jpg
@@ -39,4 +41,5 @@
 !/element_img/purple_test_img.jpg
 !/element_img/red_test_img.jpg
 !/element_img_data/element_img_square_data.txt
+!/example/*
 
