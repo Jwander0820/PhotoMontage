@@ -63,12 +63,12 @@ def main(target_img_path, element_img_data_path, org_img_pixel, element_img_pixe
     # C1. 蒙版和原始蒙太奇圖像做比例融合，最終圖像會有更好一點的效果，也能選原始圖像做融合
     mask_img_resize = cv2.resize(mask_img, (montage_img.shape[1], montage_img.shape[0]))
     merge_img = cv2.addWeighted(mask_img_resize, 0.3, montage_img, 0.7, 0)
-    # C2. 顯示圖片，mask_img為n*n模糊化圖像，montage_img為蒙太奇拼接圖像，img_tile為模糊化圖像與拼接圖像在做融合，能有更佳的效果
+    # C2. 儲存圖像；儲存蒙太奇圖像(蒙版+蒙太奇混合)
+    ImgTools.save_img(save_img_name, merge_img, org_img_pixel, element_img_pixel, cal_color_method)
+    # C3. 顯示圖片，mask_img為n*n模糊化圖像，montage_img為蒙太奇拼接圖像，img_tile為模糊化圖像與拼接圖像在做融合，能有更佳的效果
     ImgTools.show_img(mask_img)     # 蒙版圖像
     ImgTools.show_img(montage_img)  # 蒙太奇圖像(未混合)
     ImgTools.show_img(merge_img)    # 蒙太奇圖像(蒙版+蒙太奇混合)
-    # C3. 儲存圖像；儲存蒙太奇圖像(蒙版+蒙太奇混合)
-    ImgTools.save_img(save_img_name, merge_img, org_img_pixel, element_img_pixel, cal_color_method)
 
 
 if __name__ == '__main__':
@@ -92,10 +92,15 @@ if __name__ == '__main__':
          save_img_name,
          cal_color_method)
 
-    # target_img_path = "./target_img/Nyan_Cat.png"
-    # element_img_data_path = './element_img_data/element_img_square_data.txt'
-    # org_img_pixel = 25
-    # element_img_pixel = 200
-    # save_img_name = "Nyan_Cat_meme"
-    # cal_color_method = "most"
-    # main(target_img_path, element_img_data_path, org_img_pixel, element_img_pixel, save_img_name, cal_color_method)
+    target_img_path = "./target_img/Nyan_Cat.png"
+    element_img_data_path = './element_img_data/element_img_square_data.txt'
+    org_img_pixel = 25
+    element_img_pixel = 200
+    save_img_name = "Nyan_Cat_meme"
+    cal_color_method = "most"
+    main(target_img_path,
+         element_img_data_path,
+         org_img_pixel,
+         element_img_pixel,
+         save_img_name,
+         cal_color_method)
