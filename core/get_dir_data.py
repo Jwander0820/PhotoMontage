@@ -48,8 +48,10 @@ class GetDirImg:
                         img_crop = cv2.resize(img_crop, (200, 200))  # 縮小尺寸加速計算
                         _, average_color = CalImgData.cal_img_average_color(img_crop)  # 元素圖像平均顏色
                         _, most_color = CalImgData.cal_img_pixel_frequency_color(img_crop)  # 元素圖像最多的顏色
-                        print(f'{file};{(x, y, w, h)};{tuple(average_color)};{tuple(most_color)}')
-                        f.write(f'{file};{(x, y, w, h)};{tuple(average_color)};{tuple(most_color)}\n')
+                        avg_tup = tuple(int(c) for c in average_color)
+                        most_tup = tuple(int(c) for c in most_color)
+                        print(f'{file};{(x, y, w, h)};{avg_tup};{most_tup}')
+                        f.write(f'{file};{(x, y, w, h)};{avg_tup};{most_tup}\n')
                     except:
                         None
         return True
@@ -82,8 +84,10 @@ class GetDirImg:
                         img_crop = cv2.resize(img_crop, (200, 200))  # 縮小尺寸加速計算
                         _, average_color = CalImgData.cal_img_average_color(img_crop)  # 元素圖像平均顏色
                         _, most_color = CalImgData.cal_img_pixel_frequency_color(img_crop)  # 元素圖像最多的顏色
-                        print(f'{file};{(x, y, w, h)};{tuple(average_color)};{tuple(most_color)}')
-                        f.write(f'{file};{(x, y, w, h)};{tuple(average_color)};{tuple(most_color)}\n')
+                        avg_tup = tuple(int(c) for c in average_color)
+                        most_tup = tuple(int(c) for c in most_color)
+                        print(f'{file};{(x, y, w, h)};{avg_tup};{most_tup}')
+                        f.write(f'{file};{(x, y, w, h)};{avg_tup};{most_tup}\n')
                     except:
                         None
         return True

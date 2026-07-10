@@ -42,7 +42,7 @@ class ProcessingImg:
         :param cal_color_method: 計算顏色的方法
         :return: 要裁切的檔案路徑,裁切資料的座標資訊,相似顏色清單
         """
-        similar_color = [10000, 0]  # [距離,編號]紀錄最相近的顏色
+        similar_color = [float('inf'), 0]  # [距離,編號]紀錄最相近的顏色
         similar_color_list = []
         for k in range(len(element_img_list)):
             _, _, average_color, most_color = SpiltTxtData.split_img_resize_data(element_img_list[k])

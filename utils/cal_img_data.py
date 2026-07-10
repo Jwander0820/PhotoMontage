@@ -69,8 +69,8 @@ class CalImgData:
         :param color2:要計算的顏色B
         :return:回傳歐式距離之值
         """
-        b1, g1, r1 = color1
-        b2, g2, r2 = color2
+        b1, g1, r1 = int(color1[0]), int(color1[1]), int(color1[2])
+        b2, g2, r2 = int(color2[0]), int(color2[1]), int(color2[2])
         euclidean_distance = (b1 - b2) ** 2 + (g1 - g2) ** 2 + (r1 - r2) ** 2
         return euclidean_distance
 
