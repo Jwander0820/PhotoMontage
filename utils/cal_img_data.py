@@ -3,6 +3,23 @@ import numpy as np
 
 class CalImgData:
     @staticmethod
+    def get_img_average_color(img):
+        """Return an average BGR color without copying or repainting the image."""
+        return np.asarray(np.mean(img, axis=(0, 1)), dtype=np.uint8)
+
+    @staticmethod
+    def get_img_pixel_frequency_color(img):
+        """Return the exact most frequent BGR color using packed pixels."""
+        pixels = img.reshape(-1, 3).astype(np.uint32, copy=False)
+        packed = pixels[:, 0] | (pixels[:, 1] << 8) | (pixels[:, 2] << 16)
+        values, counts = np.unique(packed, return_counts=True)
+        selected = int(values[int(np.argmax(counts))])
+        return np.asarray(
+            [selected & 255, (selected >> 8) & 255, (selected >> 16) & 255],
+            dtype=np.uint8,
+        )
+
+    @staticmethod
     def cal_img_average_color(img):
         """
         傳入圖像，計算其平均顏色，回傳同樣大小矩形的純色圖像，和平均顏色
@@ -10,9 +27,9 @@ class CalImgData:
         :return: 同樣大小矩形的純色圖像, 平均顏色
         """
         # 取矩陣平均，並回傳相同大小，單一色塊的矩形
-        img_temp = img.copy()
-        img_temp[:, :, 0], img_temp[:, :, 1], img_temp[:, :, 2] = np.average(img_temp, axis=(0, 1))
-        color = img_temp[0][0][:]
+        color = CalImgData.get_img_average_color(img)
+        img_temp = np.empty_like(img)
+        img_temp[:] = color
         return img_temp, color
 
     @staticmethod
@@ -23,10 +40,9 @@ class CalImgData:
         :return: 同樣大小矩形的純色圖像, 眾數顏色
         """
         # 取矩陣平均，並回傳相同大小，單一色塊的矩形
-        img_temp = img.copy()
-        unique, counts = np.unique(img_temp.reshape(-1, 3), axis=0, return_counts=True)
-        img_temp[:, :, 0], img_temp[:, :, 1], img_temp[:, :, 2] = unique[np.argmax(counts)]
-        color = img_temp[0][0][:]
+        color = CalImgData.get_img_pixel_frequency_color(img)
+        img_temp = np.empty_like(img)
+        img_temp[:] = color
         return img_temp, color
 
     @staticmethod

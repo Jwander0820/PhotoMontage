@@ -1,189 +1,209 @@
-import os
-import sys
-import uuid
-import numpy as np
-import cv2
-from flask import Flask, request, jsonify, render_template, send_from_directory
-
-from core.processing_img import ProcessingImg
-from core.rt_input_img_data import InputImgData
-from core.get_dir_data import GetDirImg
-from utils.split_txt_data import SpiltTxtData
-from utils.img_tools import ImgTools
-import random
-
 import hashlib
+import os
+import uuid
+from pathlib import Path
+
+from flask import Flask, jsonify, render_template, request, send_from_directory
+
+from core.get_dir_data import GetDirImg
+from core.montage_service import (
+    DEFAULT_MAX_OUTPUT_EDGE,
+    DEFAULT_MAX_OUTPUT_PIXELS,
+    MontageOptions,
+    generate_montage,
+)
+from utils.img_tools import ImgTools
+
 
 app = Flask(__name__)
 
-TARGET_IMG_DIR = "./target_img"
-ELEMENT_IMG_DIR = "./element_img"
-MONTAGE_IMG_DIR = "./montage_img"
-ELEMENT_DATA_DIR = "./element_img_data"
+TARGET_IMG_DIR = Path("./target_img")
+ELEMENT_IMG_DIR = Path("./element_img")
+MONTAGE_IMG_DIR = Path("./montage_img")
+ELEMENT_DATA_DIR = Path("./element_img_data")
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
 
-for d in [TARGET_IMG_DIR, MONTAGE_IMG_DIR, ELEMENT_DATA_DIR, ELEMENT_IMG_DIR]:
-    if not os.path.exists(d):
-        os.makedirs(d)
+for directory in (
+    TARGET_IMG_DIR,
+    MONTAGE_IMG_DIR,
+    ELEMENT_DATA_DIR,
+    ELEMENT_IMG_DIR,
+):
+    directory.mkdir(parents=True, exist_ok=True)
 
-# If element_img is empty, auto-generate 128 test color blocks
-has_images = False
-if os.path.exists(ELEMENT_IMG_DIR):
-    for f in os.listdir(ELEMENT_IMG_DIR):
-        if f.lower().endswith(('.png', '.jpg', '.jpeg')):
-            has_images = True
-            break
 
-if not has_images:
+def _ensure_sample_materials() -> None:
+    has_images = any(
+        path.suffix.lower() in IMAGE_EXTENSIONS for path in ELEMENT_IMG_DIR.iterdir()
+    )
+    if has_images:
+        return
     print("Auto-generating 128 test color blocks for startup...")
     try:
         from generate_test_elements import generate_color_blocks
-        generate_color_blocks(ELEMENT_IMG_DIR, 128)
+
+        generate_color_blocks(str(ELEMENT_IMG_DIR), 128)
         print("Success: Generated 128 test color blocks.")
-    except Exception as e:
-        print(f"Warning: Could not auto-generate test elements: {e}")
+    except Exception as exc:
+        print(f"Warning: Could not auto-generate test elements: {exc}")
 
-def get_element_data_file(element_dir):
-    # 根據資料夾路徑計算 MD5，產生唯一的快取檔名
+
+if os.environ.get("PHOTOMONTAGE_SKIP_SAMPLE_MATERIALS") != "1":
+    _ensure_sample_materials()
+
+
+def get_element_data_file(element_dir: str) -> Path:
     abs_path = os.path.abspath(element_dir)
-    dir_hash = hashlib.md5(abs_path.encode('utf-8')).hexdigest()[:8]
-    folder_name = "".join([c for c in os.path.basename(abs_path) if c.isalnum() or c in ('_', '-')])
-    if not folder_name:
-        folder_name = "dir"
-    return os.path.join(ELEMENT_DATA_DIR, f"cache_{folder_name}_{dir_hash}.txt")
+    directory_hash = hashlib.md5(abs_path.encode("utf-8")).hexdigest()[:8]
+    folder_name = "".join(
+        character
+        for character in os.path.basename(abs_path)
+        if character.isalnum() or character in ("_", "-")
+    )
+    return ELEMENT_DATA_DIR / f"cache_{folder_name or 'dir'}_{directory_hash}.txt"
 
 
-@app.route('/')
+def _form_int(name: str, default: int) -> int:
+    try:
+        return int(request.form.get(name, default))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} 必須是整數") from exc
+
+
+def _build_options() -> MontageOptions:
+    max_megapixels = _form_int(
+        "max_output_megapixels",
+        DEFAULT_MAX_OUTPUT_PIXELS // 1_000_000,
+    )
+    allow_large_output = request.form.get("allow_large_output", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    return MontageOptions(
+        sampling_size=_form_int("org_img_pixel", 25),
+        element_size=_form_int("element_img_pixel", 100),
+        color_method=request.form.get("cal_color_method", "average"),
+        max_output_edge=_form_int("max_output_edge", DEFAULT_MAX_OUTPUT_EDGE),
+        max_output_pixels=max_megapixels * 1_000_000,
+        allow_large_output=allow_large_output,
+    )
+
+
+def _resolve_predefined_image(filename: str) -> Path:
+    candidate = (TARGET_IMG_DIR / Path(filename).name).resolve()
+    if candidate.parent != TARGET_IMG_DIR.resolve() or not candidate.is_file():
+        raise ValueError("找不到指定的預設圖片")
+    return candidate
+
+
+def _ensure_element_index(element_dir: str) -> Path:
+    directory = Path(element_dir)
+    if not directory.is_dir():
+        raise ValueError(f"素材資料夾不存在：{element_dir}")
+    index_path = get_element_data_file(element_dir)
+    if not index_path.is_file() or index_path.stat().st_size == 0:
+        GetDirImg.get_specified_dir_img_data(element_dir, index_path.name)
+    if not index_path.is_file() or index_path.stat().st_size == 0:
+        raise ValueError("素材資料庫為空，請加入圖片後重新掃描")
+    return index_path
+
+
+@app.route("/")
 def index():
-    # Provide predefined target images
-    target_images = []
-    if os.path.exists(TARGET_IMG_DIR):
-        target_images = [f for f in os.listdir(TARGET_IMG_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-    return render_template('index.html', target_images=target_images)
+    target_images = sorted(
+        path.name
+        for path in TARGET_IMG_DIR.iterdir()
+        if path.suffix.lower() in IMAGE_EXTENSIONS
+    )
+    return render_template(
+        "index.html",
+        target_images=target_images,
+        default_max_output_edge=DEFAULT_MAX_OUTPUT_EDGE,
+        default_max_output_megapixels=DEFAULT_MAX_OUTPUT_PIXELS // 1_000_000,
+    )
 
-@app.route('/api/update_elements', methods=['POST'])
+
+@app.route("/api/update_elements", methods=["POST"])
 def update_elements():
     try:
-        element_dir = request.form.get('element_dir', ELEMENT_IMG_DIR)
-        if not os.path.exists(element_dir):
-            return jsonify({'error': f'資料夾不存在: {element_dir}'}), 400
-            
-        element_data_file = get_element_data_file(element_dir)
-        cache_filename = os.path.basename(element_data_file)
-        
-        # 刪除舊的資料清單以重新產生
-        if os.path.exists(element_data_file):
-            os.remove(element_data_file)
-            
-        GetDirImg.get_specified_dir_img_data(element_dir, cache_filename)
-        
-        # 計算成功讀取了幾張圖片
-        count = 0
-        if os.path.exists(element_data_file):
-            with open(element_data_file, 'r') as f:
-                lines = f.readlines()
-                count = len(lines)
-                
-        return jsonify({
-            'success': True,
-            'count': count,
-            'message': f'成功更新素材庫，共讀取了 {count} 張圖片。'
-        })
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        element_dir = request.form.get("element_dir", str(ELEMENT_IMG_DIR))
+        if not Path(element_dir).is_dir():
+            return jsonify({"error": f"素材資料夾不存在：{element_dir}"}), 400
 
-@app.route('/api/montage', methods=['POST'])
+        index_path = get_element_data_file(element_dir)
+        if not GetDirImg.get_specified_dir_img_data(element_dir, index_path.name):
+            return jsonify({"error": "沒有可讀取的素材圖片，原有索引已保留。"}), 400
+        with index_path.open("r", encoding="utf-8") as source:
+            count = sum(1 for line in source if line.strip())
+        return jsonify(
+            {
+                "success": True,
+                "count": count,
+                "message": f"素材索引已更新，共 {count} 張圖片。",
+            }
+        )
+    except Exception as exc:
+        app.logger.exception("Unable to update material index")
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/montage", methods=["POST"])
 def run_montage():
     try:
-        org_img_pixel = int(request.form.get('org_img_pixel', 100))
-        element_img_pixel = int(request.form.get('element_img_pixel', 200))
-        cal_color_method = request.form.get('cal_color_method', 'average')
-        element_dir = request.form.get('element_dir', ELEMENT_IMG_DIR)
-        
-        # Handle file upload or predefined selection
-        target_img_path = None
-        if 'image_file' in request.files and request.files['image_file'].filename != '':
-            file = request.files['image_file']
-            filename = f"{uuid.uuid4().hex}_{file.filename}"
-            target_img_path = os.path.join(TARGET_IMG_DIR, filename)
-            file.save(target_img_path)
+        options = _build_options()
+        options.validate()
+        element_dir = request.form.get("element_dir", str(ELEMENT_IMG_DIR))
+        upload = request.files.get("image_file")
+        if upload and upload.filename:
+            target = ImgTools.decode_image_bytes(upload.read())
         else:
-            predefined_img = request.form.get('predefined_img')
-            if predefined_img:
-                target_img_path = os.path.join(TARGET_IMG_DIR, predefined_img)
-        
-        if not target_img_path or not os.path.exists(target_img_path):
-            return jsonify({'error': 'No valid target image provided'}), 400
+            predefined_image = request.form.get("predefined_img", "")
+            if not predefined_image:
+                raise ValueError("請上傳圖片或選擇預設圖片")
+            target = _resolve_predefined_image(predefined_image)
 
-        element_data_file = get_element_data_file(element_dir)
-        cache_filename = os.path.basename(element_data_file)
+        element_index = _ensure_element_index(element_dir)
+        result_id = uuid.uuid4().hex[:12]
+        output_filename = f"Montage_web_{result_id}.png"
+        output_path = MONTAGE_IMG_DIR / output_filename
+        result = generate_montage(
+            target,
+            element_index,
+            output_path,
+            options,
+        )
 
-        # If data file doesn't exist, generate it now using the element_dir
-        if not os.path.exists(element_data_file):
-            if not os.path.exists(element_dir):
-                return jsonify({'error': f'素材資料夾不存在: {element_dir}。請確認路徑或將圖片放入該資料夾。'}), 400
-            print(f"Generating element image data from {element_dir}...")
-            GetDirImg.get_specified_dir_img_data(element_dir, cache_filename)
+        response = result.to_dict()
+        response.pop("output_path", None)
+        response.update(
+            {
+                "success": True,
+                "result_url": f"/montage_img/{output_filename}",
+            }
+        )
+        return jsonify(response)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except MemoryError:
+        return jsonify(
+            {"error": "記憶體不足，請提高取樣尺寸或降低輸出限制。"}
+        ), 413
+    except Exception as exc:
+        app.logger.exception("Unable to generate montage")
+        return jsonify({"error": str(exc)}), 500
 
-        # Double check if any elements exist in index
-        if not os.path.exists(element_data_file) or os.path.getsize(element_data_file) == 0:
-            return jsonify({'error': '素材資料庫為空，請放入圖片後點擊「更新素材資料庫」'}), 400
 
-        mask_img, montage_img, img_height_num, img_width_num = InputImgData.rt_input_img_data(
-            target_img_path, org_img_pixel, element_img_pixel)
-            
-        element_img_list = InputImgData.rt_element_img_list(element_data_file)
-        
-        color_set = ProcessingImg.cal_img_block_color_set(
-            mask_img, org_img_pixel, img_width_num, img_height_num, cal_color_method=cal_color_method)
-            
-        block_color_dict = ProcessingImg.cal_img_block_color_dict(
-            color_set, element_img_list, cal_color_method=cal_color_method)
-            
-        for i in range(img_width_num):
-            for j in range(img_height_num):
-                mask_img_tmp, color = ProcessingImg.cal_img_block_color(
-                    mask_img, org_img_pixel, i, j, cal_color_method=cal_color_method)
-                
-                matched_elements = block_color_dict.get(tuple(color))
-                if not matched_elements:
-                    # fallback if dictionary fails somehow
-                    continue
-                    
-                selected_element_idx = random.choice(matched_elements)
-                selected_element = element_img_list[selected_element_idx]
-                file_path, crop_data, _, _ = SpiltTxtData.split_img_resize_data(selected_element)
-                
-                montage_img = ProcessingImg.crop_element_img_paste_montage_img(
-                    file_path, crop_data, montage_img, element_img_pixel, i, j)
-
-        mask_img_resize = cv2.resize(mask_img, (montage_img.shape[1], montage_img.shape[0]))
-        merge_img = cv2.addWeighted(mask_img_resize, 0.3, montage_img, 0.7, 0)
-        
-        save_img_name = f"web_{uuid.uuid4().hex[:8]}"
-        ImgTools.save_img(save_img_name, merge_img, org_img_pixel, element_img_pixel, cal_color_method)
-        
-        zoom_ratio = element_img_pixel // org_img_pixel
-        output_filename = f'Montage_{save_img_name}_ZoomRatio-{zoom_ratio}_ElementImgSize-{element_img_pixel}_Method-{cal_color_method}.png'
-        
-        return jsonify({
-            'success': True,
-            'result_url': f'/montage_img/{output_filename}'
-        })
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/montage_img/<filename>')
+@app.route("/montage_img/<path:filename>")
 def serve_montage_img(filename):
     return send_from_directory(MONTAGE_IMG_DIR, filename)
-    
-@app.route('/target_img/<filename>')
+
+
+@app.route("/target_img/<path:filename>")
 def serve_target_img(filename):
     return send_from_directory(TARGET_IMG_DIR, filename)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(debug=True, port=5000)

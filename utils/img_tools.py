@@ -1,7 +1,8 @@
 import cv2
 import os
+from io import BytesIO
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 class ImgTools:
@@ -48,15 +49,40 @@ class ImgTools:
                                    ])[1].tofile(filename)
 
     @staticmethod
-    def pil_import_img_trans_cv2(file_path):
+    def pil_import_img_trans_cv2(file_path, *, apply_exif_orientation=False):
         """
         透過PIL匯入圖片並轉換成cv2格式傳出
         :param file_path: 要讀取的圖片路徑
         :return: 回傳cv2形式的圖像資料
         """
-        img = Image.open(file_path)  # 使用PIL讀取檔案，避開cv2無法讀取中文路徑的問題
-        pil2cv2 = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
-        return pil2cv2
+        with Image.open(file_path) as image:
+            # Keep material coordinates compatible with existing text indices.
+            if apply_exif_orientation:
+                ImageOps.exif_transpose(image, in_place=True)
+            with image.convert("RGB") as rgb:
+                return cv2.cvtColor(np.asarray(rgb), cv2.COLOR_RGB2BGR)
+
+    @staticmethod
+    def decode_image_bytes(data):
+        """Decode an uploaded image without creating a persistent source copy."""
+        try:
+            return ImgTools.pil_import_img_trans_cv2(BytesIO(data), apply_exif_orientation=True)
+        except (OSError, ValueError, Image.DecompressionBombError) as exc:
+            raise ValueError("無法讀取上傳圖片，請確認檔案完整且為支援的圖片格式。") from exc
+
+    @staticmethod
+    def save_png(filename, img, compression=1):
+        """Save a PNG with Unicode-path support and explicit compression."""
+        directory = os.path.dirname(os.path.abspath(filename))
+        os.makedirs(directory, exist_ok=True)
+        success, encoded = cv2.imencode(
+            ".png",
+            img,
+            [int(cv2.IMWRITE_PNG_COMPRESSION), int(compression)],
+        )
+        if not success:
+            raise OSError(f"Unable to encode PNG: {filename}")
+        encoded.tofile(filename)
 
     @staticmethod
     def concat_vh(list_2d):

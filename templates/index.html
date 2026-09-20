@@ -1,50 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhotoMontage Studio</title>
+    <title>PhotoMontage 工作台</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="layout">
-        <!-- Sidebar Controls -->
         <aside class="sidebar">
-            <div class="brand">
-                <h1>Montage<br/><span class="accent">Studio</span></h1>
-                <p>Generate mosaic art from any image</p>
-            </div>
-            
+            <header class="brand">
+                <p class="brand-kicker">PHOTO MOSAIC ENGINE</p>
+                <h1>Montage<span>工作台</span></h1>
+                <p>先看清輸出規格，再讓每一格找到自己的素材。</p>
+            </header>
+
             <form id="montage-form" enctype="multipart/form-data">
-                <section class="control-group">
-                    <label class="control-label">00 / Element Database</label>
+                <section class="control-group" aria-labelledby="materials-heading">
+                    <div class="section-heading">
+                        <h2 id="materials-heading">素材庫</h2>
+                        <span>只建立色彩索引，不複製原圖</span>
+                    </div>
                     <div class="input-field">
-                        <label for="element_dir">Local Materials Folder Path</label>
-                        <input type="text" id="element_dir" name="element_dir" value="D:\MainProject\PhotoMontage\element_img">
-                        <p class="help-text">Input local path containing source elements</p>
+                        <label for="element_dir">本機素材資料夾</label>
+                        <input type="text" id="element_dir" name="element_dir" value="./element_img" spellcheck="false">
                     </div>
                     <button type="button" class="secondary-btn" id="update-db-btn">
-                        <span>Scan & Update DB</span>
-                        <div class="spinner"></div>
+                        <span>掃描並更新索引</span>
+                        <span class="spinner" aria-hidden="true"></span>
                     </button>
-                    <div id="db-status" class="db-status">Status: Ready</div>
+                    <div id="db-status" class="db-status" role="status">索引待命</div>
                 </section>
 
-                <section class="control-group">
-                    <label class="control-label">01 / Source Image</label>
-                    <div class="file-upload">
-                        <input type="file" id="image_file" name="image_file" accept="image/png, image/jpeg">
-                        <label for="image_file" class="upload-btn">Upload Image</label>
-                        <span id="file-name" class="file-name">No file chosen</span>
+                <section class="control-group" aria-labelledby="source-heading">
+                    <div class="section-heading">
+                        <h2 id="source-heading">目標圖片</h2>
+                        <span>上傳圖不會永久保留</span>
                     </div>
-                    
+                    <div class="file-upload">
+                        <input type="file" id="image_file" name="image_file" accept="image/png,image/jpeg,image/tiff">
+                        <label for="image_file" class="upload-btn">選擇本機圖片</label>
+                        <span id="file-name" class="file-name">尚未選取</span>
+                    </div>
                     <div class="predefined-images">
-                        <span class="sub-label">Or use predefined:</span>
+                        <label class="sub-label" for="predefined_img">或使用範例</label>
                         <select name="predefined_img" id="predefined_img">
-                            <option value="">-- Select --</option>
+                            <option value="">選擇範例圖片</option>
                             {% for img in target_images %}
                             <option value="{{ img }}">{{ img }}</option>
                             {% endfor %}
@@ -52,73 +56,124 @@
                     </div>
                 </section>
 
-                <section class="control-group">
-                    <label class="control-label">02 / Configuration</label>
-                    
-                    <div class="input-field">
-                        <label for="org_img_pixel">Sampling Size (n*n)</label>
-                        <input type="number" id="org_img_pixel" name="org_img_pixel" value="25" min="1" max="500">
-                        <p class="help-text">Smaller = more detailed but slower</p>
+                <section class="control-group" aria-labelledby="geometry-heading">
+                    <div class="section-heading">
+                        <h2 id="geometry-heading">拼貼密度</h2>
+                        <span>細節與速度的平衡</span>
                     </div>
-                    
-                    <div class="input-field">
-                        <label for="element_img_pixel">Element Size (m*m)</label>
-                        <input type="number" id="element_img_pixel" name="element_img_pixel" value="100" min="10" max="1000">
-                        <p class="help-text">Output dimension scaling</p>
+                    <div class="field-grid">
+                        <div class="input-field">
+                            <label for="org_img_pixel">取樣邊長</label>
+                            <input type="number" id="org_img_pixel" name="org_img_pixel" value="25" min="1" step="1">
+                            <p class="help-text">越小越細，也會產生更多格。</p>
+                        </div>
+                        <div class="input-field">
+                            <label for="element_img_pixel">素材格邊長</label>
+                            <input type="number" id="element_img_pixel" name="element_img_pixel" value="100" min="1" step="1">
+                            <p class="help-text">決定每格輸出的像素尺寸。</p>
+                        </div>
                     </div>
-
                     <div class="input-field">
-                        <label for="cal_color_method">Color Method</label>
+                        <label for="cal_color_method">色彩取樣方式</label>
                         <select name="cal_color_method" id="cal_color_method">
-                            <option value="average">Average</option>
-                            <option value="most">Most (Mode)</option>
+                            <option value="average">平均色 · 建議，速度較快</option>
+                            <option value="most">眾數色 · 精確，速度較慢</option>
                         </select>
                     </div>
                 </section>
 
+                <details class="limit-panel">
+                    <summary>
+                        <span>輸出安全限制</span>
+                        <span class="summary-value">{{ default_max_output_edge }} px / {{ default_max_output_megapixels }} MP</span>
+                    </summary>
+                    <div class="limit-panel-body">
+                        <div class="field-grid">
+                            <div class="input-field">
+                                <label for="max_output_edge">單邊上限</label>
+                                <input type="number" id="max_output_edge" name="max_output_edge" value="{{ default_max_output_edge }}" min="1" step="1">
+                            </div>
+                            <div class="input-field">
+                                <label for="max_output_megapixels">總百萬像素</label>
+                                <input type="number" id="max_output_megapixels" name="max_output_megapixels" value="{{ default_max_output_megapixels }}" min="1" step="1">
+                            </div>
+                        </div>
+                        <label class="risk-confirm" id="large-output-confirm" hidden>
+                            <input type="checkbox" id="allow_large_output" name="allow_large_output">
+                            <span>我了解超過預設上限可能耗盡記憶體</span>
+                        </label>
+                    </div>
+                </details>
+
+                <section class="output-readout" id="output-readout" aria-live="polite">
+                    <div class="readout-topline">
+                        <span>OUTPUT MAP</span>
+                        <span id="estimate-state">等待圖片</span>
+                    </div>
+                    <strong id="estimate-dimensions">— × —</strong>
+                    <div class="readout-scale" aria-hidden="true"><span id="readout-scale-fill"></span></div>
+                    <p id="estimate-meta">選取圖片後會在這裡估算格數與記憶體。</p>
+                    <p id="estimate-warning" class="estimate-warning" hidden></p>
+                </section>
+
                 <button type="submit" class="action-btn" id="generate-btn">
-                    <span>Generate Montage</span>
-                    <div class="spinner"></div>
+                    <span>生成蒙太奇</span>
+                    <span class="spinner" aria-hidden="true"></span>
                 </button>
             </form>
         </aside>
 
-        <!-- Preview Area -->
         <main class="preview-area" id="preview-area">
-            <div class="view-controls" id="view-controls" style="display: none;">
-                <button class="icon-btn" id="zoom-out" title="Zoom Out (Scroll Down)">
+            <div class="workspace-label" aria-hidden="true">
+                <span>CANVAS</span><span>RGB / PNG</span>
+            </div>
+            <div class="view-controls" id="view-controls" hidden>
+                <button type="button" class="icon-btn" id="zoom-out" title="縮小" aria-label="縮小預覽">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </button>
-                <button class="icon-btn" id="zoom-reset" title="Reset Zoom">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                <button type="button" class="icon-btn" id="zoom-reset" title="重設" aria-label="重設預覽比例">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6M4 4v6M20 20h-6M20 20v-6"></path></svg>
                 </button>
-                <button class="icon-btn" id="zoom-in" title="Zoom In (Scroll Up)">
+                <button type="button" class="icon-btn" id="zoom-in" title="放大" aria-label="放大預覽">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </button>
-                <div class="divider"></div>
-                <a id="download-btn" class="icon-btn download" href="#" download="montage.png" title="Download Image">
+                <span class="divider"></span>
+                <a id="download-btn" class="icon-btn download" href="#" download="montage.png">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    <span>Download</span>
+                    <span>下載 PNG</span>
                 </a>
             </div>
 
-            <div id="result-container" class="empty-state">
+            <div id="result-container" class="result-container">
                 <div class="empty-message">
-                    <h2>Ready to Create</h2>
-                    <p>Upload a source image and configure parameters to see the magic happen.</p>
+                    <div class="empty-grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                    <h2>畫布等待素材</h2>
+                    <p>選擇目標圖，左側會先算出這次輸出的實際負擔。</p>
                 </div>
-                <img id="result-img" src="" alt="Generated Montage" style="display: none;" draggable="false">
+                <img id="result-img" src="" alt="生成的蒙太奇圖片" hidden draggable="false">
             </div>
-            
-            <div id="loading-overlay" class="overlay">
+
+            <aside class="result-stats" id="result-stats" hidden aria-live="polite">
+                <span id="result-size">—</span>
+                <span id="result-grid">—</span>
+                <span id="result-time">—</span>
+            </aside>
+
+            <div id="loading-overlay" class="overlay" aria-hidden="true">
                 <div class="loading-content">
-                    <div class="pulse"></div>
-                    <p>Processing pixels...</p>
+                    <div class="processing-grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                    <p id="loading-text">分析格子與素材...</p>
                 </div>
             </div>
         </main>
     </div>
-    
+
+    <script>
+        window.MONTAGE_DEFAULTS = {
+            maxEdge: {{ default_max_output_edge }},
+            maxMegapixels: {{ default_max_output_megapixels }}
+        };
+    </script>
     <script src="/static/script.js"></script>
 </body>
 </html>
