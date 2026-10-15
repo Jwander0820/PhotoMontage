@@ -8,7 +8,11 @@ class SpiltTxtData:
         :param img_data:要解析的圖像資料
         :return:檔案路徑(str),裁切資訊(list),平均顏色(tuple),最多的顏色(tuple)
         """
-        parts = img_data.split(';')
+        # Paths may legally contain semicolons; only the last three delimiters
+        # separate the crop and color fields in the legacy index format.
+        parts = img_data.rstrip('\r\n').rsplit(';', 3)
+        if len(parts) != 4 or not parts[0]:
+            raise ValueError('Invalid material index fields')
         file_path = parts[0]  # 分號分隔取出檔案路徑
         
         crop_nums = re.findall(r'-?\d+', parts[1])
@@ -19,6 +23,9 @@ class SpiltTxtData:
         
         most_nums = re.findall(r'-?\d+', parts[3])
         most_color_data = tuple(int(x) for x in most_nums[-3:])
+
+        if (len(crop_data), len(average_color_data), len(most_color_data)) != (4, 3, 3):
+            raise ValueError('Invalid material crop or color data')
 
         return file_path, crop_data, average_color_data, most_color_data
 

@@ -36,11 +36,9 @@ class GetDirImg:
 
     @staticmethod
     def get_specified_dir_img_data(dir_path, save_element_img_list_file_name):
-        os.makedirs("./element_img_data", exist_ok=True)
-        output_path = os.path.join(
-            "./element_img_data",
-            save_element_img_list_file_name,
-        )
+        output_path = Path(save_element_img_list_file_name)
+        if not output_path.is_absolute():
+            output_path = Path("./element_img_data") / output_path
         return GetDirImg._write_index(dir_path, output_path)
 
     @staticmethod

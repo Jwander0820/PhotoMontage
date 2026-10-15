@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const defaults = window.MONTAGE_DEFAULTS || { maxEdge: 10000, maxMegapixels: 100 };
+    const requestHeaders = { 'X-PhotoMontage-Token': defaults.apiToken || '' };
     const form = document.getElementById('montage-form');
     const fileInput = document.getElementById('image_file');
     const fileNameDisplay = document.getElementById('file-name');
@@ -85,18 +86,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const maxPixels = maxMegapixels * 1000000;
         if (!Number.isSafeInteger(maxPixels)) return null;
+        const cellLimit = Math.min(maxPixels, defaults.maxCells || 1000000);
         let sampling = Math.max(
             requestedSampling,
             Math.ceil(width / maxEdge),
             Math.ceil(height / maxEdge),
-            Math.ceil(Math.sqrt((width * height) / maxPixels))
+            Math.ceil(Math.sqrt((width * height) / cellLimit))
         );
         let columns;
         let rows;
         do {
             columns = Math.ceil(width / sampling);
             rows = Math.ceil(height / sampling);
-            if (columns <= maxEdge && rows <= maxEdge && columns * rows <= maxPixels) break;
+            if (columns <= maxEdge && rows <= maxEdge && columns * rows <= cellLimit) break;
             sampling += 1;
         } while (true);
 
@@ -232,7 +234,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const payload = new FormData();
             payload.append('element_dir', elementDir);
-            const response = await fetch('/api/update_elements', { method: 'POST', body: payload });
+            const response = await fetch('/api/update_elements', {
+                method: 'POST', headers: requestHeaders, body: payload
+            });
             const data = await response.json();
             if (!response.ok || !data.success) throw new Error(data.error || '更新失敗');
             dbStatus.textContent = `索引完成 · ${data.count} 張素材`;
@@ -274,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/montage', {
                 method: 'POST',
+                headers: requestHeaders,
                 body: payload
             });
             const data = await response.json();

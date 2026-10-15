@@ -171,7 +171,9 @@
     <script>
         window.MONTAGE_DEFAULTS = {
             maxEdge: {{ default_max_output_edge }},
-            maxMegapixels: {{ default_max_output_megapixels }}
+            maxMegapixels: {{ default_max_output_megapixels }},
+            maxCells: {{ max_montage_cells }},
+            apiToken: {{ api_token | tojson }}
         };
     </script>
     <script src="/static/script.js"></script>

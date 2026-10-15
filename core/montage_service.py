@@ -20,6 +20,7 @@ from utils.split_txt_data import SpiltTxtData
 
 DEFAULT_MAX_OUTPUT_EDGE = 10_000
 DEFAULT_MAX_OUTPUT_PIXELS = 100_000_000
+MAX_MONTAGE_CELLS = 1_000_000
 COLOR_DISTANCE_THRESHOLD = 1_000
 TargetSource = Union[str, PathLike[str], np.ndarray]
 
@@ -111,19 +112,22 @@ class MontageResult:
 
 
 def plan_output_size(width: int, height: int, options: MontageOptions) -> OutputPlan:
-    """Return an output plan that stays within both edge and pixel budgets."""
+    """Return a plan within edge, output-pixel, and processing-cell budgets."""
     options.validate()
     if width <= 0 or height <= 0:
         raise ValueError("Source image dimensions must be positive")
 
     sampling_size = options.sampling_size
+    # A small output tile does not make per-cell matching/placement data cheap.
+    # Keep this budget independent of the caller's large-output confirmation.
+    cell_limit = min(options.max_output_pixels, MAX_MONTAGE_CELLS)
     # Establish a close lower bound when even one-pixel output tiles would exceed
     # the configured budgets. The short correction loop handles ceil rounding.
     sampling_size = max(
         sampling_size,
         ceil(width / options.max_output_edge),
         ceil(height / options.max_output_edge),
-        ceil((width * height / options.max_output_pixels) ** 0.5),
+        ceil((width * height / cell_limit) ** 0.5),
     )
 
     while True:
@@ -132,7 +136,7 @@ def plan_output_size(width: int, height: int, options: MontageOptions) -> Output
         if (
             columns <= options.max_output_edge
             and rows <= options.max_output_edge
-            and columns * rows <= options.max_output_pixels
+            and columns * rows <= cell_limit
         ):
             break
         sampling_size += 1

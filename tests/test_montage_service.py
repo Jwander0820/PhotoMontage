@@ -8,6 +8,7 @@ import numpy as np
 
 from core.montage_service import (
     ElementRecord,
+    MAX_MONTAGE_CELLS,
     MontageOptions,
     calculate_tile_colors,
     generate_montage,
@@ -18,6 +19,33 @@ from utils.img_tools import ImgTools
 
 
 class OutputPlanningTests(unittest.TestCase):
+    def test_cell_budget_adjusts_sampling_independently_of_output_pixels(self):
+        for width, height, sampling, columns, rows in (
+            (1000, 1000, 1, 1000, 1000),  # Exact budget remains unchanged.
+            (1001, 1000, 2, 501, 500),
+            (4000, 3000, 4, 1000, 750),
+            (4001, 3999, 5, 801, 800),  # Ceil rounding needs one correction.
+            (20000, 1, 2, 10000, 1),
+        ):
+            with self.subTest(dimensions=(width, height)):
+                plan = plan_output_size(width, height, MontageOptions(1, 1))
+                self.assertEqual((plan.sampling_size, plan.columns, plan.rows),
+                                 (sampling, columns, rows))
+                self.assertLessEqual(plan.columns * plan.rows, MAX_MONTAGE_CELLS)
+                self.assertEqual(plan.was_limited, sampling != 1)
+
+    def test_large_output_confirmation_cannot_raise_cell_budget(self):
+        plan = plan_output_size(4000, 3000, MontageOptions(
+            1, 1, max_output_edge=20000, max_output_pixels=400_000_000,
+            allow_large_output=True,
+        ))
+        self.assertEqual((plan.sampling_size, plan.columns, plan.rows), (4, 1000, 750))
+
+    def test_pixel_budget_below_cell_budget_remains_effective(self):
+        plan = plan_output_size(20, 20, MontageOptions(1, 1, max_output_pixels=10))
+        self.assertLessEqual(plan.output_pixels, 10)
+        self.assertGreaterEqual(plan.element_size, 1)
+
     def test_exact_default_limit_is_allowed(self):
         plan = plan_output_size(100, 100, MontageOptions(1, 100))
         self.assertEqual((plan.output_width, plan.output_height), (10_000, 10_000))
